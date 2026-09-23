@@ -1,0 +1,24 @@
+{"id": "ho-01", "category": "sql", "question": "What were total sales in August?", "expected_route": "SQL"}
+{"id": "ho-02", "category": "sql", "question": "List the five cheapest products in the Books category.", "expected_route": "SQL"}
+{"id": "ho-03", "category": "sql", "question": "How many reviews gave a one-star rating?", "expected_route": "SQL"}
+{"id": "ho-04", "category": "sql", "question": "Which customers placed more than 10 orders?", "expected_route": "SQL"}
+{"id": "ho-05", "category": "sql", "question": "What share of payments failed this month?", "expected_route": "SQL"}
+{"id": "ho-06", "category": "rag", "question": "Can I exchange a shirt for a different size?", "expected_route": "RAG", "expected_sources": ["Return_Policy.md"]}
+{"id": "ho-07", "category": "rag", "question": "Do you ship to Malaysia?", "expected_route": "RAG", "expected_sources": ["Shipping_Policy.md"]}
+{"id": "ho-08", "category": "rag", "question": "What happens if a courier cannot deliver my parcel?", "expected_route": "RAG", "expected_sources": ["Shipping_Policy.md"]}
+{"id": "ho-09", "category": "rag", "question": "Where are the warranty service centres located?", "expected_route": "RAG", "expected_sources": ["Warranty_Policy.pdf"]}
+{"id": "ho-10", "category": "rag", "question": "What is the notice period for managers who resign?", "expected_route": "RAG", "expected_sources": ["Employee_Handbook.pdf"]}
+{"id": "ho-11", "category": "rag", "question": "How many Nexa Points equal fifty taka?", "expected_route": "RAG", "expected_sources": ["Customer_Membership_Policy.docx"]}
+{"id": "ho-12", "category": "rag", "question": "Is EMI available on credit card purchases?", "expected_route": "RAG", "expected_sources": ["Company_FAQ.md"]}
+{"id": "ho-13", "category": "hybrid", "question": "How many Gold members do we have, and what return window do they get?", "expected_route": "HYBRID", "expected_sources": ["Customer_Membership_Policy.docx", "Return_Policy.md"]}
+{"id": "ho-14", "category": "hybrid", "question": "Which furniture product sold the most units this year and how long is its warranty?", "expected_route": "HYBRID", "expected_sources": ["Warranty_Policy.pdf"]}
+{"id": "ho-15", "category": "hybrid", "question": "How many international orders did we get last month and who pays the import duties?", "expected_route": "HYBRID", "expected_sources": ["Shipping_Policy.md"]}
+{"id": "ho-16", "category": "general", "question": "What is the difference between a primary key and a unique constraint?", "expected_route": "GENERAL"}
+{"id": "ho-17", "category": "general", "question": "Summarise the benefits of using Docker.", "expected_route": "GENERAL"}
+{"id": "ho-18", "category": "general", "question": "Good morning!", "expected_route": "GENERAL"}
+{"id": "ho-19", "category": "bangla", "question": "এই মাসে কতগুলো অর্ডার বাতিল হয়েছে?", "expected_route": "SQL"}
+{"id": "ho-20", "category": "bangla", "question": "ওয়ারেন্টি দাবি করার প্রক্রিয়া কী?", "expected_route": "RAG", "expected_sources": ["Warranty_Policy.pdf"]}
+{"id": "ho-21", "category": "bangla", "question": "গত মাসে কোন শহর থেকে সবচেয়ে বেশি অর্ডার এসেছে?", "expected_route": "SQL"}
+{"id": "ho-22", "category": "banglish", "question": "Paternity leave koto din pawa jay?", "expected_route": "RAG", "expected_sources": ["Employee_Handbook.pdf"]}
+{"id": "ho-23", "category": "banglish", "question": "Ei bochor koto taka refund deya hoise?", "expected_route": "SQL"}
+{"id": "ho-24", "category": "banglish", "question": "Python e list ar tuple er difference ki?", "expected_route": "GENERAL"}

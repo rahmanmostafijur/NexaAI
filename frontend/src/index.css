@@ -1,0 +1,271 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+  --canvas: #f7f8fb;
+  --surface: #ffffff;
+  --surface-2: #f1f3f8;
+  --surface-3: #e6e9f1;
+  --line: #e2e6ee;
+  --line-strong: #cdd3df;
+  --fg: #0f172a;
+  --fg-muted: #475569;
+  --fg-subtle: #64748b;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-soft: #eef2ff;
+  --accent-fg: #ffffff;
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+  --success: #047857;
+  --success-soft: #ecfdf5;
+  --warning: #b45309;
+  --warning-soft: #fffbeb;
+  --ring: #6366f1;
+  --shadow-color: 220 40% 20%;
+}
+
+.dark {
+  color-scheme: dark;
+  --canvas: #0b1020;
+  --surface: #111729;
+  --surface-2: #161d33;
+  --surface-3: #1e2742;
+  --line: #232c47;
+  --line-strong: #323d5e;
+  --fg: #e6e9f2;
+  --fg-muted: #a3adc2;
+  --fg-subtle: #8792ab;
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-soft: #1e2250;
+  --accent-fg: #0b1020;
+  --danger: #f87171;
+  --danger-soft: #2a1418;
+  --success: #34d399;
+  --success-soft: #0f2a22;
+  --warning: #fbbf24;
+  --warning-soft: #2a2110;
+  --ring: #a5b4fc;
+  --shadow-color: 225 60% 2%;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-ring: var(--ring);
+  --font-sans:
+    'Inter Variable', 'Noto Sans Bengali', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+    sans-serif;
+  --font-bengali: 'Noto Sans Bengali', 'Inter Variable', ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Code', Menlo, Consolas, monospace;
+  --shadow-soft:
+    0 1px 2px hsl(var(--shadow-color) / 0.06), 0 4px 16px hsl(var(--shadow-color) / 0.06);
+  --shadow-pop: 0 8px 30px hsl(var(--shadow-color) / 0.18);
+  --animate-fade-in: fade-in 180ms ease-out;
+  --animate-slide-in-right: slide-in-right 220ms ease-out;
+  --animate-slide-in-left: slide-in-left 220ms ease-out;
+  --animate-flash: flash 1.6s ease-out;
+}
+
+@keyframes caret-blink {
+  to {
+    visibility: hidden;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes flash {
+  0%,
+  40% {
+    background-color: var(--accent-soft);
+    box-shadow: 0 0 0 2px var(--ring);
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background-color: var(--canvas);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  :lang(bn) {
+    font-family: var(--font-bengali);
+    line-height: 1.8;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 30%, transparent);
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Markdown content ---- */
+.md-content {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.md-content > :first-child {
+  margin-top: 0;
+}
+.md-content > :last-child {
+  margin-bottom: 0;
+}
+.md-content p,
+.md-content ul,
+.md-content ol,
+.md-content blockquote,
+.md-content pre,
+.md-content .md-table-wrap {
+  margin: 0.75em 0;
+}
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4 {
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 1.2em 0 0.5em;
+}
+.md-content h1 {
+  font-size: 1.25rem;
+}
+.md-content h2 {
+  font-size: 1.125rem;
+}
+.md-content h3,
+.md-content h4 {
+  font-size: 1rem;
+}
+.md-content ul {
+  list-style: disc;
+  padding-left: 1.4em;
+}
+.md-content ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+}
+.md-content li + li {
+  margin-top: 0.25em;
+}
+.md-content a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md-content strong {
+  font-weight: 600;
+}
+.md-content blockquote {
+  border-left: 3px solid var(--line-strong);
+  padding-left: 0.9em;
+  color: var(--fg-muted);
+}
+.md-content hr {
+  border-color: var(--line);
+  margin: 1.2em 0;
+}
+.md-content :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  padding: 0.1em 0.35em;
+}
+.md-content .md-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+}
+.md-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.md-content th,
+.md-content td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.md-content th {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+.md-content tr:last-child td {
+  border-bottom: 0;
+}
+.md-content pre code.hljs {
+  background: transparent;
+  padding: 0;
+}
+.md-streaming > :last-child::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--accent);
+  animation: caret-blink 1s steps(2, start) infinite;
+}
