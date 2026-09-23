@@ -32,7 +32,8 @@ citations (`[DB1]`, `[S1]`), the generated SQL and an execution trace.
 - [Security considerations](#security-considerations)
 - [Future improvements](#future-improvements)
 
-Further reading: [docs/architecture.md](docs/architecture.md) (design decisions),
+Further reading: **[docs/adoption-guide.md](docs/adoption-guide.md) (use it with your own data, integrate via API, go live)**,
+[docs/architecture.md](docs/architecture.md) (design decisions),
 [docs/developer-guide.md](docs/developer-guide.md) (file-by-file walkthrough),
 [docs/api-contract.md](docs/api-contract.md) (API and SSE event contract).
 

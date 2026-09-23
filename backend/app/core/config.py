@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "NexaAI Agent"
+    # The organisation the assistant works for (used in every prompt).
+    company_name: str = Field(default="Nexa Commerce Ltd", min_length=1, max_length=120)
+    currency_code: str = Field(default="BDT", min_length=1, max_length=10)
+    currency_symbol: str = Field(default="৳", min_length=1, max_length=5)
     app_version: str = "1.0.0"
     environment: Literal["development", "production", "test"] = "development"
     log_level: str = "INFO"

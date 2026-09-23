@@ -19,7 +19,7 @@ SELECT c.relname AS table_name,
        GREATEST(c.reltuples, 0)::bigint AS row_estimate
 FROM pg_class c
 JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname = :schema AND c.relkind = 'r'
+WHERE n.nspname = :schema AND c.relkind IN ('r', 'v', 'm', 'f')
 ORDER BY c.relname
 """
 
@@ -32,7 +32,8 @@ SELECT c.relname AS table_name,
 FROM pg_attribute a
 JOIN pg_class c ON c.oid = a.attrelid
 JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname = :schema AND c.relkind = 'r' AND a.attnum > 0 AND NOT a.attisdropped
+WHERE n.nspname = :schema AND c.relkind IN ('r', 'v', 'm', 'f') AND a.attnum > 0
+  AND NOT a.attisdropped
 ORDER BY c.relname, a.attnum
 """
 

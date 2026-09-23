@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from app.llm.base import ChatMessage
-from app.prompts.common import SECURITY_RULES, escape_tag_content
+from app.prompts.common import SECURITY_RULES, branding, escape_tag_content
 
 VERSION = "router.v1"
 
 _SYSTEM = """\
-You are the query router of NexaAI Agent, an assistant for the company Nexa Commerce Ltd.
+You are the query router of NexaAI Agent, an assistant for the company {company}.
 Decide which source of truth must answer the user's LATEST message.
 
 Routes:
@@ -51,6 +51,7 @@ def build_messages(
     message: str, history: str | None, tables: list[str], documents: list[str]
 ) -> list[ChatMessage]:
     system = _SYSTEM.format(
+        **branding(),
         tables=", ".join(tables) or "none",
         documents=", ".join(documents) or "none (the knowledge base is empty)",
         security=SECURITY_RULES,

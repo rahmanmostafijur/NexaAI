@@ -133,6 +133,25 @@ async def test_schema_retrieval_selects_relevant_tables_only() -> None:
     assert "inventory" in stock and "products" in stock
 
 
+async def test_views_in_the_business_schema_are_queryable() -> None:
+    """Existing databases can be connected by exposing their tables as commerce views."""
+    from sqlalchemy import text
+
+    async with get_session_factory()() as session:
+        await session.execute(
+            text(
+                "CREATE OR REPLACE VIEW commerce.city_sales AS SELECT shipping_city AS city, "
+                "SUM(total_amount) AS revenue FROM commerce.orders GROUP BY shipping_city"
+            )
+        )
+        await session.execute(text("COMMENT ON VIEW commerce.city_sales IS 'Revenue per city.'"))
+        await session.commit()
+    snapshot = await SchemaCatalog(get_session_factory(), "commerce").snapshot()
+    assert snapshot.tables["city_sales"].description == "Revenue per city."
+    result = await executor().execute("SELECT city, revenue FROM city_sales ORDER BY revenue DESC")
+    assert result.row_count > 0  # the read-only role can read views via default privileges
+
+
 async def test_readonly_role_is_configured_in_the_database() -> None:
     pool = await get_readonly_pool()
     async with pool.acquire() as connection:

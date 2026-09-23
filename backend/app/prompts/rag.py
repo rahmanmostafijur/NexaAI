@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from app.llm.base import ChatMessage
-from app.prompts.common import SECURITY_RULES, language_instruction
+from app.prompts.common import SECURITY_RULES, branding, language_instruction
 
 ANSWER_VERSION = "rag_answer.v2"  # v2: citation example
 RERANK_VERSION = "rag_rerank.v1"
 
 _ANSWER_SYSTEM = """\
-You answer questions about Nexa Commerce Ltd. using ONLY the document excerpts provided.
+You answer questions about {company} using ONLY the document excerpts provided.
 
 Rules:
 - Every factual sentence must end with the citation of the excerpt it came from, e.g. [S1] or
@@ -36,7 +36,7 @@ def build_answer_messages(
     question: str, context: str, language_code: str, history: str | None = None
 ) -> list[ChatMessage]:
     system = _ANSWER_SYSTEM.format(
-        language=language_instruction(language_code), security=SECURITY_RULES
+        **branding(), language=language_instruction(language_code), security=SECURITY_RULES
     )
     user = f"Document excerpts:\n{context}\n\nQuestion: {question}"
     if history:

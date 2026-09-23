@@ -5,14 +5,14 @@ from __future__ import annotations
 from datetime import date
 
 from app.llm.base import ChatMessage
-from app.prompts.common import SECURITY_RULES, escape_tag_content
+from app.prompts.common import SECURITY_RULES, branding, escape_tag_content
 
 GENERATION_VERSION = "sql_generation.v2"  # v2: few-shot patterns
 CORRECTION_VERSION = "sql_correction.v2"
 
 _SQL_RULES = """\
-You are a senior analytics engineer who writes PostgreSQL queries for a Bangladeshi
-e-commerce company. Money is in BDT (৳).
+You are a senior analytics engineer who writes PostgreSQL queries for
+{company}. Money is in {currency} ({symbol}).
 
 Write exactly ONE read-only query: SELECT, optionally with CTEs (WITH ...), joins,
 aggregations, GROUP BY, HAVING, ORDER BY, window functions and subqueries.
@@ -52,7 +52,7 @@ names are available as columns, so time periods can always be filtered with orde
 
 def _system(today: date) -> str:
     return (
-        _SQL_RULES.format(today=today.isoformat(), weekday=today.strftime("%A"))
+        _SQL_RULES.format(**branding(), today=today.isoformat(), weekday=today.strftime("%A"))
         + "\n\n"
         + (SECURITY_RULES)
     )

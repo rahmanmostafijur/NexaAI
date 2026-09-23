@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -21,6 +22,7 @@ import asyncpg
 from app.core.errors import SQLExecutionError
 
 JsonScalar = str | int | float | bool | None
+_IDENTIFIER = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
 
 
 @dataclass
@@ -58,7 +60,11 @@ class SQLExecutor:
         *,
         timeout_ms: int,
         max_rows: int,
+        schema: str = "commerce",
     ) -> None:
+        if not _IDENTIFIER.match(schema):
+            raise ValueError(f"Invalid schema name: {schema!r}")
+        self._schema = schema
         self._pool_provider = pool_provider
         self._timeout_ms = int(timeout_ms)
         self._max_rows = max_rows
@@ -68,7 +74,7 @@ class SQLExecutor:
     ) -> tuple[list[asyncpg.Record], list[str]]:
         async with connection.transaction(readonly=True, isolation="repeatable_read"):
             await connection.execute(f"SET LOCAL statement_timeout = {self._timeout_ms}")
-            await connection.execute("SET LOCAL search_path = commerce")
+            await connection.execute(f"SET LOCAL search_path = {self._schema}")
             statement = await connection.prepare(sql)
             columns = [attribute.name for attribute in statement.get_attributes()]
             cursor = await statement.cursor()

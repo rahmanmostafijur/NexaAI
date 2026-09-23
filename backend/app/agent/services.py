@@ -59,6 +59,7 @@ class AgentServices:
                 get_readonly_pool,
                 timeout_ms=settings.sql_statement_timeout_ms,
                 max_rows=settings.sql_max_rows,
+                schema=settings.business_schema,
             ),
             max_rows=settings.sql_max_rows,
             max_corrections=settings.sql_max_correction_attempts,
