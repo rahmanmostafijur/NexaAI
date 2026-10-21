@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 
+from app.core.metrics import LLM_TOKENS
 from app.llm.base import TokenUsage
 
 _current_usage: ContextVar[TokenUsage | None] = ContextVar("current_usage", default=None)
@@ -31,6 +32,8 @@ def track_usage() -> Iterator[TokenUsage]:
 
 
 def record_usage(prompt_tokens: int, completion_tokens: int) -> None:
+    LLM_TOKENS.labels(type="prompt").inc(max(prompt_tokens, 0))
+    LLM_TOKENS.labels(type="completion").inc(max(completion_tokens, 0))
     usage = _current_usage.get()
     if usage is not None:
         usage.prompt_tokens += prompt_tokens

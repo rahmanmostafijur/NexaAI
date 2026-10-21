@@ -11,6 +11,7 @@ from app.agent.tools.base import ToolContext, ToolRegistry, ToolResult
 from app.agent.trace import Trace
 from app.agent.types import AgentEvent, Plan, PlanStep
 from app.core.errors import AppError, LLMUnavailableError
+from app.core.metrics import TOOL_DURATION
 
 Emit = Callable[[AgentEvent], Awaitable[None]]
 
@@ -81,6 +82,7 @@ class ToolExecutor:
             result = ToolResult("failed", exc.message, error_code=exc.code)
 
         step.duration_ms = int((time.perf_counter() - started) * 1000)
+        TOOL_DURATION.labels(tool=tool.name, status=result.status).observe(step.duration_ms / 1000)
         step.status = "failed" if result.status == "failed" else "completed"
         step.summary = result.summary
         results[step.id] = result

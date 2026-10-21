@@ -30,6 +30,7 @@ from app.core.errors import (
     PayloadTooLargeError,
     UnsupportedMediaTypeError,
 )
+from app.core.metrics import INGESTION_JOBS
 from app.embeddings.base import EmbeddingProvider
 from app.models import Document, DocumentChunk
 from app.rag.chunker import chunk_document
@@ -160,6 +161,7 @@ class IngestionService:
         try:
             await self._begin(document_id)
             await self._index(document_id)
+            INGESTION_JOBS.labels(outcome="indexed").inc()
             return JobOutcome.DONE
         except asyncio.CancelledError:
             # Shutting down mid-job: leave the document claimable instead of "processing".
@@ -173,8 +175,10 @@ class IngestionService:
             if retryable and attempt < max_attempts:
                 note = f"{message} Will retry (attempt {attempt} of {max_attempts})."
                 await self._set_status(document_id, "pending", error=note)
+                INGESTION_JOBS.labels(outcome="retry").inc()
                 return JobOutcome.RETRY
             await self._set_status(document_id, "failed", error=message)
+            INGESTION_JOBS.labels(outcome="failed").inc()
             return JobOutcome.DONE
 
     async def recover_stuck(

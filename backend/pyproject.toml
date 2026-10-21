@@ -23,6 +23,7 @@ dependencies = [
     "numpy>=1.26",
     "fpdf2>=2.8",
     "arq>=0.26",
+    "prometheus-client>=0.21",
 ]
 
 [dependency-groups]

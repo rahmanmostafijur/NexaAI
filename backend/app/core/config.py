@@ -113,6 +113,11 @@ class Settings(BaseSettings):
     ingestion_sweep_interval_seconds: int = Field(default=60, ge=5)
     rate_limit_backend: Literal["memory", "redis"] = "memory"
 
+    # Prometheus endpoint at /metrics (not under /api, so the bundled nginx never exposes it).
+    metrics_enabled: bool = True
+    # Set to require `Authorization: Bearer <token>`. Empty: only direct local/private callers.
+    metrics_token: SecretStr = SecretStr("")
+
     seed_on_startup: bool = False
 
     @field_validator("cors_origins", mode="before")

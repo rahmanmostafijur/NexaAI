@@ -27,6 +27,7 @@ from app.agent.trace import Trace
 from app.agent.types import AgentEvent, LanguageInfo, Plan, Route, RouteDecision
 from app.core.errors import AppError
 from app.core.logging import log_extra
+from app.core.metrics import AGENT_RUN_DURATION, AGENT_RUNS
 from app.db.session import session_scope
 from app.llm.usage import track_usage
 from app.repositories.agent_runs import AgentRunRepository
@@ -363,6 +364,8 @@ class AgentOrchestrator:
                 token_usage=token_usage if token_usage["total_tokens"] else None,
                 completed_at=datetime.now(UTC),
             )
+        AGENT_RUNS.labels(route=decision.route.value, status="success").inc()
+        AGENT_RUN_DURATION.labels(route=decision.route.value).observe(trace.total_ms / 1000)
         logger.info(
             "Agent run completed",
             extra=log_extra(
@@ -412,4 +415,7 @@ class AgentOrchestrator:
                 )
         except Exception:
             logger.exception("Could not record failure for run %s", run_id)
+        route = decision.route.value if decision else "unknown"
+        AGENT_RUNS.labels(route=route, status="failed").inc()
+        AGENT_RUN_DURATION.labels(route=route).observe(trace.total_ms / 1000)
         logger.warning("Agent run failed", extra=log_extra(run_id=run_id, error_code=error.code))

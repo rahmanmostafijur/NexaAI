@@ -13,10 +13,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
 from app.agent.services import AgentServices
+from app.api.metrics import router as metrics_router
 from app.api.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
+from app.core.metrics import MetricsMiddleware
 from app.core.middleware import RequestContextMiddleware
 from app.core.rate_limit import configure_rate_limiter, rate_limiter
 from app.core.security import hash_password
@@ -138,8 +140,10 @@ def create_app(
         expose_headers=["X-Request-ID", "Retry-After"],
     )
     app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(MetricsMiddleware)
     register_exception_handlers(app)
     app.include_router(api_router)
+    app.include_router(metrics_router)
     return app
 
 
