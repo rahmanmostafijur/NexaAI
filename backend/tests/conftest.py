@@ -70,7 +70,7 @@ async def database() -> None:
     maintenance = make_url(TEST_DATABASE_URL).set(drivername="postgresql", database="postgres")
     try:
         connection = await asyncpg.connect(
-            maintenance.render_as_string(hide_password=False), timeout=3
+            maintenance.render_as_string(hide_password=False), timeout=15
         )
     except (OSError, asyncpg.PostgresError) as exc:
         if os.environ.get("REQUIRE_DB") == "1":

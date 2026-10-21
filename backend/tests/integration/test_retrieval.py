@@ -33,9 +33,15 @@ async def test_document_filter_restricts_results(embeddings, knowledge_base) -> 
     assert results and all(r.document_id == membership_id for r in results)
 
 
-async def test_relevance_threshold_filters_unrelated_content(embeddings) -> None:
-    assert await retriever(embeddings, min_similarity=0.95).search("return policy", top_k=3) == []
-    assert await retriever(embeddings).search("zqxv wplk", top_k=3) == []
+async def test_relevance_threshold_filters_unrelated_content(embeddings, knowledge_base) -> None:
+    # Scoped to this module's own documents: other tests upload tiny documents with random
+    # content, whose hashed tokens can collide with the nonsense query and clear the threshold.
+    own_documents = list(knowledge_base.values())
+    strict = retriever(embeddings, min_similarity=0.95)
+    assert await strict.search("return policy", top_k=3, document_ids=own_documents) == []
+    assert (
+        await retriever(embeddings).search("zqxv wplk", top_k=3, document_ids=own_documents) == []
+    )
 
 
 async def test_injected_instructions_are_flagged_as_suspicious(embeddings) -> None:
