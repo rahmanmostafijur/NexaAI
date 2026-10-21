@@ -25,22 +25,30 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=200)
 
 
+def _check_password_strength(value: str) -> str:
+    if not re.search(r"[A-Za-z]", value) or not re.search(r"\d", value):
+        raise ValueError("Password must contain at least one letter and one number")
+    return value
+
+
 class RegisterRequest(BaseModel):
     email: Email
     password: str = Field(min_length=8, max_length=200)
     full_name: str = Field(min_length=2, max_length=200)
 
-    @field_validator("password")
-    @classmethod
-    def _strength(cls, value: str) -> str:
-        if not re.search(r"[A-Za-z]", value) or not re.search(r"\d", value):
-            raise ValueError("Password must contain at least one letter and one number")
-        return value
+    _strength = field_validator("password")(_check_password_strength)
 
     @field_validator("full_name")
     @classmethod
     def _clean_name(cls, value: str) -> str:
         return " ".join(value.split())
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=8, max_length=200)
+
+    _strength = field_validator("new_password")(_check_password_strength)
 
 
 class UserOut(BaseModel):

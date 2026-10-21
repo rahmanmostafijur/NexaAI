@@ -14,6 +14,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 REPO_DIR = BACKEND_DIR.parent
 
 INSECURE_JWT_DEFAULT = "insecure-development-secret-change-me-please-0000"
+INSECURE_READONLY_DEFAULTS = {"nexa_readonly_dev_password", "change-me-readonly-password"}
 
 
 class Settings(BaseSettings):
@@ -41,7 +42,15 @@ class Settings(BaseSettings):
     # Auth
     jwt_secret: SecretStr = SecretStr(INSECURE_JWT_DEFAULT)
     jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = Field(default=720, ge=5, le=60 * 24 * 7)
+    # Short-lived access token (kept in memory by the browser) + rotating refresh cookie.
+    access_token_expire_minutes: int = Field(default=15, ge=1, le=240)
+    refresh_token_expire_days: int = Field(default=14, ge=1, le=90)
+    session_max_days: int = Field(default=30, ge=1, le=365)
+    # A just-rotated refresh token presented again within this window (two tabs racing)
+    # gets a retryable 409 instead of being treated as theft.
+    refresh_reuse_grace_seconds: int = Field(default=10, ge=0, le=120)
+    # None = automatic: Secure cookies in production, plain cookies elsewhere.
+    cookie_secure: bool | None = None
     admin_email: str = "admin@nexa.local"
     admin_password: SecretStr = SecretStr("ChangeMe123!")
     allow_registration: bool = True
@@ -113,7 +122,18 @@ class Settings(BaseSettings):
                 raise ValueError("JWT_SECRET must be set to a random value of 32+ characters")
             if self.admin_password.get_secret_value() == "ChangeMe123!":
                 raise ValueError("ADMIN_PASSWORD must be changed in production")
+            readonly = self.sql_readonly_password.get_secret_value()
+            if readonly in INSECURE_READONLY_DEFAULTS or len(readonly) < 16:
+                raise ValueError(
+                    "SQL_READONLY_PASSWORD must be set to a random value of 16+ characters"
+                )
         return self
+
+    @property
+    def secure_cookies(self) -> bool:
+        if self.cookie_secure is not None:
+            return self.cookie_secure
+        return self.environment == "production"
 
     @property
     def readonly_database_url(self) -> str:

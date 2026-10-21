@@ -1,4 +1,13 @@
-from app.models.app_models import AgentRun, Conversation, Document, DocumentChunk, Message, User
+from app.models.app_models import (
+    AgentRun,
+    AuthSession,
+    Conversation,
+    Document,
+    DocumentChunk,
+    Message,
+    RefreshToken,
+    User,
+)
 from app.models.base import Base
 from app.models.commerce import (
     Category,
@@ -14,6 +23,7 @@ from app.models.commerce import (
 
 __all__ = [
     "AgentRun",
+    "AuthSession",
     "Base",
     "Category",
     "Conversation",
@@ -26,6 +36,7 @@ __all__ = [
     "OrderItem",
     "Payment",
     "Product",
+    "RefreshToken",
     "Return",
     "Review",
     "User",

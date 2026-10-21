@@ -33,16 +33,21 @@ def test_password_hashing() -> None:
 
 def test_jwt_round_trip_and_rejections() -> None:
     user_id = uuid.uuid4()
-    claims = decode_access_token(create_access_token(user_id, "admin", SETTINGS), SETTINGS)
+    session_id = uuid.uuid4()
+    claims = decode_access_token(
+        create_access_token(user_id, "admin", session_id, SETTINGS), SETTINGS
+    )
     assert claims.user_id == user_id and claims.role == "admin"
+    assert claims.session_id == session_id
 
     other = Settings(jwt_secret="another-secret-that-is-also-long-enough-99")
     with pytest.raises(UnauthorizedError):
-        decode_access_token(create_access_token(user_id, "user", other), SETTINGS)
+        decode_access_token(create_access_token(user_id, "user", session_id, other), SETTINGS)
 
     expired = jwt.encode(
         {
             "sub": str(user_id),
+            "sid": str(session_id),
             "iss": "nexa-agent",
             "iat": datetime.now(UTC) - timedelta(hours=2),
             "exp": datetime.now(UTC) - timedelta(hours=1),
@@ -93,13 +98,24 @@ def test_production_settings_require_real_secrets() -> None:
             jwt_secret="x" * 40,
             admin_password="ChangeMe123!",
         )
+    with pytest.raises(ValidationError, match="SQL_READONLY_PASSWORD"):
+        Settings(
+            _env_file=None,
+            environment="production",
+            jwt_secret="x" * 40,
+            admin_password="Strong-Pass-1",
+        )
     ok = Settings(
         _env_file=None,
         environment="production",
         jwt_secret="x" * 40,
         admin_password="Strong-Pass-1",
+        sql_readonly_password="a-long-random-readonly-password",
     )
     assert ok.environment == "production"
+    assert ok.secure_cookies is True
+    assert Settings(_env_file=None, environment="development").secure_cookies is False
+    assert Settings(_env_file=None, environment="development", cookie_secure=True).secure_cookies
 
 
 def test_settings_helpers() -> None:

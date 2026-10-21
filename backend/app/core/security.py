@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -31,15 +33,29 @@ def verify_password(password: str, password_hash: str) -> bool:
 class TokenClaims:
     user_id: uuid.UUID
     role: str
+    session_id: uuid.UUID
 
 
-def create_access_token(user_id: uuid.UUID, role: str, settings: Settings) -> str:
+def new_refresh_token() -> str:
+    """256 bits of randomness; opaque to the client."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_refresh_token(token: str) -> str:
+    """Only this digest is stored, so a database leak does not yield usable tokens."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def create_access_token(
+    user_id: uuid.UUID, role: str, session_id: uuid.UUID, settings: Settings
+) -> str:
     now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
+        "sid": str(session_id),
         "role": role,
         "iat": now,
-        "exp": now + timedelta(minutes=settings.jwt_expire_minutes),
+        "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
         "iss": "nexa-agent",
     }
     return jwt.encode(
@@ -54,9 +70,13 @@ def decode_access_token(token: str, settings: Settings) -> TokenClaims:
             settings.jwt_secret.get_secret_value(),
             algorithms=[settings.jwt_algorithm],
             issuer="nexa-agent",
-            options={"require": ["sub", "exp", "iat"]},
+            options={"require": ["sub", "sid", "exp", "iat"]},
         )
-        return TokenClaims(user_id=uuid.UUID(payload["sub"]), role=str(payload.get("role", "user")))
+        return TokenClaims(
+            user_id=uuid.UUID(payload["sub"]),
+            role=str(payload.get("role", "user")),
+            session_id=uuid.UUID(payload["sid"]),
+        )
     except jwt.ExpiredSignatureError as exc:
         raise UnauthorizedError("Your session has expired. Please sign in again.") from exc
     except (jwt.InvalidTokenError, ValueError, KeyError) as exc:
