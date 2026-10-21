@@ -1,5 +1,8 @@
 # NexaAI Agent
 
+[![CI](https://github.com/rahmanmostafijur/NexaAI/actions/workflows/ci.yml/badge.svg)](https://github.com/rahmanmostafijur/NexaAI/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A multilingual business AI agent that answers questions in **English, Bengali, Banglish and mixed
 Bengali–English** by choosing the right source of truth for each question:
 
@@ -307,6 +310,7 @@ Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env` (default `admin@nexa.lo
 | `MAX_UPLOAD_MB` | `10` | Upload size limit |
 | `ROUTER_CLARIFY_THRESHOLD`, `CONTEXT_MAX_MESSAGES` | `0.40`, `8` | Clarification threshold; history window |
 | `RATE_LIMIT_CHAT_PER_MINUTE`, `RATE_LIMIT_AUTH_PER_MINUTE`, `RATE_LIMIT_UPLOAD_PER_MINUTE` | `20`, `10`, `10` | Per-user / per-IP limits |
+| `METRICS_ENABLED` / `METRICS_TOKEN` | `true` / empty | Prometheus endpoint at `/metrics` (request latency by route template, agent runs by route, tool timings, LLM tokens, indexing jobs). Without a token only direct loopback/private callers may scrape; with one, `Authorization: Bearer <token>` is required. It is not served through the bundled nginx. |
 | `REDIS_URL` | empty | Redis for the indexing queue and shared rate limits; empty keeps everything in-process |
 | `INGESTION_BACKEND` | `inprocess` | `inprocess` or `arq` (Redis queue with separate workers: `python -m arq app.worker.WorkerSettings`) |
 | `INGESTION_MAX_ATTEMPTS` / `INGESTION_RETRY_BASE_SECONDS` | `3` / `5` | Tries per document and exponential backoff base for transient failures |
