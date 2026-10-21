@@ -3,7 +3,7 @@
 Unit tests need nothing external. Integration tests (marked `integration`) use
 a dedicated `nexa_test` database created from scratch with the real Alembic
 migrations and the real seed generator; they are skipped if PostgreSQL is
-not reachable.
+not reachable, unless REQUIRE_DB=1 is set (CI), in which case they fail loudly.
 """
 
 from __future__ import annotations
@@ -73,6 +73,8 @@ async def database() -> None:
             maintenance.render_as_string(hide_password=False), timeout=3
         )
     except (OSError, asyncpg.PostgresError) as exc:
+        if os.environ.get("REQUIRE_DB") == "1":
+            pytest.fail(f"PostgreSQL is required (REQUIRE_DB=1) but not available: {exc}")
         pytest.skip(f"PostgreSQL is not available: {exc}")
     try:
         await connection.execute("DROP DATABASE IF EXISTS nexa_test WITH (FORCE)")

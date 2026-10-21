@@ -95,6 +95,8 @@ def _extract_pdf(data: bytes) -> ExtractedDocument:
 
 def _extract_docx(data: bytes) -> ExtractedDocument:
     import docx
+    import docx.table
+    import docx.text.paragraph
 
     document = docx.Document(io.BytesIO(data))
     lines: list[str] = []

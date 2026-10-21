@@ -286,7 +286,7 @@ Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env` (default `admin@nexa.lo
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://nexa:…@localhost:5434/nexa` | Application database (async URL) |
+| `DATABASE_URL` | `postgresql+asyncpg://nexa:…@localhost:5440/nexa` | Application database (async URL) |
 | `SQL_READONLY_USER` / `SQL_READONLY_PASSWORD` | `nexa_readonly` / – | Role created by migrations; SELECT on `commerce` only |
 | `JWT_SECRET` | – | **Required in production** (≥ 32 chars) |
 | `JWT_EXPIRE_MINUTES` | `720` | Access token lifetime |
@@ -315,7 +315,7 @@ docker compose up --build -d          # or: make up / ./tasks.ps1 up
 |---|---|
 | Web app (nginx → React, proxies `/api`) | http://localhost:3000 |
 | Backend API / OpenAPI docs | http://localhost:8000/api/docs |
-| PostgreSQL + pgvector | localhost:5434 |
+| PostgreSQL + pgvector | localhost:5440 |
 
 On start, the backend waits for Postgres, applies migrations (which creates the read-only role),
 seeds the demo data and knowledge base, and starts uvicorn. The first start downloads the
@@ -338,7 +338,8 @@ make lint
     migrations and seed. They cover the read-only role rejecting writes, statement timeouts, the
     self-correction loop, hybrid retrieval, the full SSE pipeline for every route, the document
     lifecycle, authorization and observability.
-  - Integration tests are skipped automatically if PostgreSQL is not reachable. In tests a
+  - Integration tests are skipped automatically if PostgreSQL is not reachable, unless
+    `REQUIRE_DB=1` is set (CI does), in which case they fail loudly. In tests a
     scripted LLM and a hashing embedder replace the real providers, so they are deterministic.
 - **Frontend:** 32 Vitest tests covering the SSE parser (including chunk boundaries inside
   multi-byte Bengali characters), streaming behaviour, markdown tables, citation badges, source

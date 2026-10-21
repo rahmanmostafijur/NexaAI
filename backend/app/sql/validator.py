@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from typing import cast
 
 import sqlglot
 from sqlglot import exp
@@ -152,7 +153,7 @@ class SQLValidator:
             raise SQLSafetyError(
                 "Only a single SQL statement is allowed.", code="sql_multiple_statements"
             )
-        return statements[0]
+        return cast(exp.Expression, statements[0])
 
     def _check_statement_type(self, root: exp.Expression) -> None:
         node = root

@@ -328,7 +328,7 @@ Before rollout, collect 30–50 real questions from staff and measure how the ag
 - [ ] `ENVIRONMENT=production`. This disables the API docs and refuses default secrets.
 - [ ] Strong, unique `JWT_SECRET`, `POSTGRES_PASSWORD`, `SQL_READONLY_PASSWORD` and `ADMIN_PASSWORD`.
 - [ ] `ALLOW_REGISTRATION=false`, and `CORS_ORIGINS` set to your real domain.
-- [ ] **HTTPS:** put a reverse proxy (Caddy, nginx, Traefik, or a cloud load balancer) in front of port 3000. Only expose 443 publicly; keep 5434 and 8000 private.
+- [ ] **HTTPS:** put a reverse proxy (Caddy, nginx, Traefik, or a cloud load balancer) in front of port 3000. Only expose 443 publicly; keep 5440 and 8000 private.
 - [ ] A **paid LLM plan**, sized for your traffic (see token estimates in [§5](#5-step-2-configure)).
 - [ ] **Backups** of the `postgres_data` volume (for example a daily `pg_dump`). Uploaded files live in the `backend_data` volume.
 - [ ] **Limits:** review `RATE_LIMIT_*`, `SQL_STATEMENT_TIMEOUT_MS` and `MAX_UPLOAD_MB`.

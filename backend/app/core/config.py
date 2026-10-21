@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Database
-    database_url: str = "postgresql+asyncpg://nexa:nexa_dev_password@localhost:5434/nexa"
+    database_url: str = "postgresql+asyncpg://nexa:nexa_dev_password@localhost:5440/nexa"
     sql_readonly_user: str = "nexa_readonly"
     sql_readonly_password: SecretStr = SecretStr("nexa_readonly_dev_password")
     business_schema: str = "commerce"

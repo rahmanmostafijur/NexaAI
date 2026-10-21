@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import APIRouter
@@ -109,4 +110,4 @@ async def chat(
         conversation_id=body.conversation_id,
         request_id=request_id_var.get(),
     )
-    return ChatResponse(conversation_id=conversation_id, message=MessageOut(**message))
+    return ChatResponse(conversation_id=uuid.UUID(conversation_id), message=MessageOut(**message))

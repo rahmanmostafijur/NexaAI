@@ -153,9 +153,9 @@ class OpenAICompatibleProvider(LLMProvider):
                             continue
                         raise _status_error(response)
                     async for line in response.aiter_lines():
-                        delta = _parse_stream_line(line)
-                        if delta:
-                            yield delta
+                        piece = _parse_stream_line(line)
+                        if piece:
+                            yield piece
                     return
         except httpx.TimeoutException as exc:
             raise LLMUnavailableError("The language model timed out. Please try again.") from exc

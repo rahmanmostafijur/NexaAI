@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import uuid
 
 from sqlalchemy import func, select
@@ -24,7 +25,7 @@ class DocumentRepository:
             raise NotFoundError("Document not found")
         return document
 
-    async def indexed_titles(self) -> list[str]:
+    async def indexed_titles(self) -> builtins.list[str]:
         rows = await self._session.scalars(
             select(Document.title).where(Document.status == "indexed").order_by(Document.title)
         )
@@ -32,7 +33,7 @@ class DocumentRepository:
 
     async def chunks(
         self, document_id: uuid.UUID, *, limit: int, offset: int
-    ) -> tuple[list[DocumentChunk], int]:
+    ) -> tuple[builtins.list[DocumentChunk], int]:
         total = await self._session.scalar(
             select(func.count(DocumentChunk.id)).where(DocumentChunk.document_id == document_id)
         )

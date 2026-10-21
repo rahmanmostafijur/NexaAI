@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -92,7 +93,7 @@ class MessageRepository:
         await self._session.refresh(message)
         return message
 
-    async def list(self, conversation_id: uuid.UUID) -> list[Message]:
+    async def list(self, conversation_id: uuid.UUID) -> builtins.list[Message]:
         rows = await self._session.scalars(
             select(Message)
             .where(Message.conversation_id == conversation_id)
@@ -100,7 +101,7 @@ class MessageRepository:
         )
         return list(rows)
 
-    async def recent(self, conversation_id: uuid.UUID, limit: int) -> list[Message]:
+    async def recent(self, conversation_id: uuid.UUID, limit: int) -> builtins.list[Message]:
         if limit <= 0:
             return []
         rows = await self._session.scalars(
