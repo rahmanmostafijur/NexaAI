@@ -235,7 +235,7 @@ policy document.
 | `GET /api/knowledge/search` | Hybrid document search |
 | `GET /api/schema`, `GET /api/schema/tables` | Database schema browser (admin) |
 | `GET /api/agent/runs[/{id}]`, `GET /api/agent/stats` | Observability |
-| `GET /api/health`, `GET /api/system/info` | Health and configuration |
+| `GET /api/health`, `GET /api/ready`, `GET /api/system/info` | Liveness, readiness (database, migrations at head, Redis) and configuration |
 
 Interactive docs are served at `http://localhost:8000/api/docs` outside production. The full
 contract, including every SSE event, is in [docs/api-contract.md](docs/api-contract.md).
@@ -294,7 +294,7 @@ Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env` (default `admin@nexa.lo
 | `SESSION_MAX_DAYS` | `30` | Absolute session lifetime regardless of activity |
 | `REFRESH_REUSE_GRACE_SECONDS` | `10` | Window in which a just-rotated refresh token returns a retryable 409 instead of revoking the session |
 | `COOKIE_SECURE` | automatic | Force the `Secure` cookie flag on/off; automatic means on when `ENVIRONMENT=production` |
-| `REQUIRE_DB` | unset | Test-only: `1` makes integration tests fail instead of skip when PostgreSQL is unreachable |
+| `REQUIRE_DB` / `REQUIRE_REDIS` | unset | Test-only: `1` makes integration tests fail instead of skip when PostgreSQL / Redis is unreachable (`TEST_REDIS_URL` overrides the default `redis://localhost:6381/15`) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | – | Bootstrap administrator (password must be changed in production) |
 | `ALLOW_REGISTRATION` | `true` | Allow self-service `user` accounts |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed browser origins |

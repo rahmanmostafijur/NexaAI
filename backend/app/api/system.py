@@ -3,12 +3,14 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.api.deps import CurrentUser, ServicesDep, SettingsDep
+from app.core.readiness import check_database, check_migrations, check_redis
 from app.db.session import session_scope
 from app.rag.extractors import SOURCE_TYPES
-from app.schemas.system import Health, SystemInfo
+from app.schemas.system import Health, ReadinessChecks, Ready, SystemInfo
 
 router = APIRouter(tags=["system"])
 logger = logging.getLogger(__name__)
@@ -28,6 +30,21 @@ async def health(settings: SettingsDep) -> Health:
         database=database,
         llm_configured=settings.llm_configured,
     )
+
+
+@router.get("/ready", response_model=Ready, responses={503: {"model": Ready}})
+async def ready(settings: SettingsDep) -> JSONResponse:
+    """Readiness: database reachable, schema at the latest migration, Redis if configured."""
+    database = await check_database()
+    checks = ReadinessChecks(
+        database=database,
+        # Without a database the migration state is unknowable, which counts as not ready.
+        migrations=database and await check_migrations(),
+        redis=await check_redis(settings),
+    )
+    is_ready = checks.database and checks.migrations and checks.redis is not False
+    body = Ready(status="ready" if is_ready else "not_ready", checks=checks)
+    return JSONResponse(body.model_dump(), status_code=200 if is_ready else 503)
 
 
 @router.get("/system/info", response_model=SystemInfo)

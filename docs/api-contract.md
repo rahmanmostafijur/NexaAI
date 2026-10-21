@@ -234,5 +234,6 @@ type Stats = { total_runs: number; success_rate: number; avg_latency_ms: number;
 
 | Method | Path | Response |
 |---|---|---|
-| GET | `/api/health` | `{ status: "ok" \| "degraded", database: boolean, llm_configured: boolean }` |
+| GET | `/api/health` | Liveness: `{ status: "ok" \| "degraded", database: boolean, llm_configured: boolean }`. Always 200 while the process is up. |
+| GET | `/api/ready` | Readiness: `{ status: "ready" \| "not_ready", checks: { database, migrations, redis } }`. `migrations` is true when the database is at the newest revision; `redis` is `null` when `REDIS_URL` is unset. Returns 503 when not ready. No authentication, no connection details. |
 | GET | `/api/system/info` | `{ app_name, version, llm_provider, llm_model, embedding_provider, embedding_model, max_upload_mb, allowed_extensions: string[] }` |

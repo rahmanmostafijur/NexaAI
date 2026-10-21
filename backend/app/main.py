@@ -18,6 +18,7 @@ from app.core.config import Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
+from app.core.rate_limit import configure_rate_limiter, rate_limiter
 from app.core.security import hash_password
 from app.core.sessions import SessionService
 from app.db.session import dispose_engines, session_scope
@@ -100,6 +101,7 @@ def create_app(
             await purge_stale_sessions(settings)
         except Exception:
             logger.exception("Could not purge stale auth sessions at startup")
+        configure_rate_limiter(settings)
         warm_up = asyncio.create_task(_warm_up(app.state.services.embeddings))
         try:
             await app.state.services.ingestion_queue.start()
@@ -115,6 +117,7 @@ def create_app(
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         await app.state.services.ingestion_queue.aclose()
+        await rate_limiter.aclose()
         await app.state.services.llm.aclose()
         await dispose_engines()
 

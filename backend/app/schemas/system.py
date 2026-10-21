@@ -11,6 +11,17 @@ class Health(BaseModel):
     llm_configured: bool
 
 
+class ReadinessChecks(BaseModel):
+    database: bool
+    migrations: bool
+    redis: bool | None  # None: Redis is not configured
+
+
+class Ready(BaseModel):
+    status: Literal["ready", "not_ready"]
+    checks: ReadinessChecks
+
+
 class SystemInfo(BaseModel):
     app_name: str
     version: str
