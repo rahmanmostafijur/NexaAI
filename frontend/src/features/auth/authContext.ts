@@ -1,13 +1,17 @@
 import { createContext, useContext } from 'react';
-import type { LoginRequest, RegisterRequest, User } from '@/types/api';
+import type { ChangePasswordRequest, LoginRequest, RegisterRequest, User } from '@/types/api';
 
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  /** True while a reloaded tab is silently restoring its session from the refresh cookie. */
+  isLoading: boolean;
   login: (body: LoginRequest) => Promise<void>;
   register: (body: RegisterRequest) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
+  changePassword: (body: ChangePasswordRequest) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthState | null>(null);

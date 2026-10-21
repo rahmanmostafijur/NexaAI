@@ -226,6 +226,7 @@ async def test_change_password_rejects_wrong_current_password(fresh_client):
     )
 
     assert response.status_code == 401
+    assert response.json()["error"]["code"] == "invalid_credentials"
     assert (await http.get("/api/auth/me", headers=_bearer(registered))).status_code == 200
 
 
@@ -286,3 +287,25 @@ async def test_access_token_without_session_claim_is_rejected(client):
     response = await client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 401
+
+
+async def test_purge_removes_long_expired_sessions_but_keeps_recent_ones(fresh_client):
+    from app.core.sessions import SessionService
+
+    http = fresh_client()
+    email, _ = await _register(http)
+    async with session_scope() as session:
+        user_id = await session.scalar(select(User.id).where(User.email == email))
+        await session.execute(
+            update(AuthSession)
+            .where(AuthSession.user_id == user_id)
+            .values(expires_at=datetime.now(UTC) - timedelta(days=30))
+        )
+        old_count = await SessionService(session, get_settings()).purge_expired()
+
+    assert old_count >= 1
+    async with session_scope() as session:
+        remaining = await session.scalar(
+            select(AuthSession.id).where(AuthSession.user_id == user_id)
+        )
+    assert remaining is None

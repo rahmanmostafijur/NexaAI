@@ -67,7 +67,9 @@ frontend/
 | File | Why it matters |
 |---|---|
 | `src/services/sse.ts` | Streaming SSE parser. It handles frames split anywhere, including inside multi-byte Bengali characters, and supports aborting. |
-| `src/services/http.ts` | Fetch wrapper: bearer token, error envelope to `ApiError`, 401 handling. |
+| `src/services/http.ts` | Fetch wrapper: bearer token, error envelope to `ApiError`, refresh-and-retry on 401. |
+| `src/services/session.ts` | In-memory access token store plus a non-secret "signed in" hint for reloads and cross-tab sign-out. |
+| `src/services/sessionRefresh.ts` | Single-flight refresh against the httpOnly cookie (Web Locks across tabs, retry on `refresh_in_progress`). |
 | `src/features/chat/hooks/useChatStream.ts` | Streaming state machine (idle → streaming → done or error) with stop and retry. |
 | `src/features/chat/chatState.ts` | A pure reducer that applies SSE events to the in-flight message. |
 | `src/features/chat/MessageBubble.tsx`, `MarkdownContent.tsx`, `CitationBadge.tsx`, `SqlBlock.tsx`, `SourcesList.tsx` | Answer rendering: markdown tables, citation badges linked to sources, collapsible SQL with a result preview. |

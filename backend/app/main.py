@@ -19,6 +19,7 @@ from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
 from app.core.security import hash_password
+from app.core.sessions import SessionService
 from app.db.session import dispose_engines, session_scope
 from app.embeddings.base import EmbeddingProvider
 from app.embeddings.factory import get_embedding_provider
@@ -43,6 +44,14 @@ async def ensure_admin(settings: Settings) -> None:
             )
         )
         logger.info("Bootstrapped administrator account %s", settings.admin_email)
+
+
+async def purge_stale_sessions(settings: Settings) -> None:
+    """Drop long-expired and long-revoked sessions so the auth tables stay small."""
+    async with session_scope() as session:
+        removed = await SessionService(session, settings).purge_expired()
+    if removed:
+        logger.info("Purged %d stale auth sessions", removed)
 
 
 async def _warm_up(embeddings: EmbeddingProvider) -> None:
@@ -71,6 +80,10 @@ def create_app(
             await ensure_admin(settings)
         except Exception:
             logger.exception("Could not verify the administrator account at startup")
+        try:
+            await purge_stale_sessions(settings)
+        except Exception:
+            logger.exception("Could not purge stale auth sessions at startup")
         warm_up = asyncio.create_task(_warm_up(app.state.services.embeddings))
         if not settings.llm_configured:
             logger.warning("No LLM configured: chat will use heuristic routing and cannot answer")

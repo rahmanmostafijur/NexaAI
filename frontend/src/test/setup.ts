@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+import { clearSession } from '@/services/session';
 
 // The default 1 s is too tight for findBy*/waitFor when workers compete for CPU.
 configure({ asyncUtilTimeout: 5000 });
@@ -27,6 +28,7 @@ Element.prototype.scrollIntoView = vi.fn();
 
 afterEach(() => {
   cleanup();
+  clearSession();
   window.localStorage.clear();
   vi.unstubAllGlobals();
 });

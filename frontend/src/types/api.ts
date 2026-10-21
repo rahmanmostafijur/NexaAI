@@ -25,6 +25,11 @@ export interface RegisterRequest extends LoginRequest {
   full_name: string;
 }
 
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
 export interface ErrorEnvelope {
   error: { code: string; message: string; request_id?: string };
 }

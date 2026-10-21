@@ -1,71 +1,77 @@
-import type { User } from '@/types/api';
+import type { TokenResponse, User } from '@/types/api';
 
-const STORAGE_KEY = 'nexaai.session';
+/**
+ * The access token lives in memory only, so a script injected into the page cannot read it
+ * from storage. The long-lived credential is the httpOnly refresh cookie managed by the
+ * server. A non-secret hint in localStorage tells a reloaded tab that a silent refresh is
+ * worth attempting, and lets other tabs notice sign-in/sign-out.
+ */
+export const SESSION_HINT_KEY = 'nexaai.signedIn';
+export const LEGACY_STORAGE_KEY = 'nexaai.session';
 export const SESSION_CHANGED_EVENT = 'nexaai:session-changed';
 
 export interface Session {
   token: string;
   user: User;
+  /** Epoch ms when the access token expires; null disables proactive refresh. */
   expiresAt: number | null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function isUser(value: unknown): value is User {
-  return (
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.email === 'string' &&
-    typeof value.full_name === 'string' &&
-    (value.role === 'admin' || value.role === 'user')
-  );
-}
-
-function parseSession(raw: string | null): Session | null {
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!isRecord(parsed) || typeof parsed.token !== 'string' || !isUser(parsed.user)) {
-      return null;
-    }
-    const expiresAt = typeof parsed.expiresAt === 'number' ? parsed.expiresAt : null;
-    if (expiresAt !== null && expiresAt <= Date.now()) return null;
-    return { token: parsed.token, user: parsed.user, expiresAt };
-  } catch {
-    return null;
-  }
-}
+let current: Session | null = null;
 
 function notify(): void {
   window.dispatchEvent(new Event(SESSION_CHANGED_EVENT));
 }
 
-export function readSession(): Session | null {
+function setHint(present: boolean): void {
   try {
-    return parseSession(window.localStorage.getItem(STORAGE_KEY));
+    if (present) window.localStorage.setItem(SESSION_HINT_KEY, '1');
+    else window.localStorage.removeItem(SESSION_HINT_KEY);
   } catch {
-    return null;
+    // Storage can be unavailable (private mode); the in-memory session still works.
   }
+}
+
+/** Older versions stored the bearer token in localStorage; never leave one behind. */
+export function purgeLegacySession(): void {
+  try {
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+purgeLegacySession();
+
+export function sessionFromResponse(response: TokenResponse): Session {
+  const expiresAt = response.expires_in > 0 ? Date.now() + response.expires_in * 1000 : null;
+  return { token: response.access_token, user: response.user, expiresAt };
+}
+
+export function readSession(): Session | null {
+  return current;
 }
 
 export function writeSession(session: Session): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  } finally {
-    notify();
-  }
+  current = session;
+  setHint(true);
+  notify();
 }
 
 export function clearSession(): void {
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-  } finally {
-    notify();
-  }
+  current = null;
+  setHint(false);
+  notify();
 }
 
 export function getToken(): string | null {
-  return readSession()?.token ?? null;
+  return current?.token ?? null;
+}
+
+export function hasSessionHint(): boolean {
+  try {
+    return window.localStorage.getItem(SESSION_HINT_KEY) !== null;
+  } catch {
+    return false;
+  }
 }

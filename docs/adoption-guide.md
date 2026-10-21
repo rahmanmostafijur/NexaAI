@@ -356,14 +356,16 @@ The full contract is in [api-contract.md](api-contract.md).
 ### 12.1 Authenticate
 
 Create a dedicated **service account** (a normal `user`) for each integration, and log in to get
-a token. Tokens are valid for `JWT_EXPIRE_MINUTES`, which defaults to 12 hours. When a call
-returns **401**, log in again.
+a token. Access tokens are valid for `ACCESS_TOKEN_EXPIRE_MINUTES` (15 by default). Server
+integrations without a browser cookie jar should simply log in again when a call returns
+**401**; the response also sets a refresh cookie, which a cookie-aware client can exchange at
+`POST /api/auth/refresh` (see `docs/api-contract.md`).
 
 ```bash
 curl -s -X POST https://assistant.acme.example/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"crm-bot@acme.example","password":"..."}'
-# → {"access_token":"eyJ...","token_type":"bearer","expires_in":43200,"user":{...}}
+# → {"access_token":"eyJ...","token_type":"bearer","expires_in":900,"user":{...}}
 ```
 
 ### 12.2 Ask a question (simple, non-streaming)

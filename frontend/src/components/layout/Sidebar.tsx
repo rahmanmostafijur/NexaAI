@@ -41,7 +41,7 @@ function UserMenu() {
         label="Sign out"
         size="sm"
         icon={<LogOut className="size-4" />}
-        onClick={logout}
+        onClick={() => void logout()}
       />
     </div>
   );

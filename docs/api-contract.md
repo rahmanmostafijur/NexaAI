@@ -1,7 +1,8 @@
 # NexaAI Agent — API Contract
 
-All endpoints are served under `/api`. Every endpoint except `/api/health`,
-`/api/auth/login` and `/api/auth/register` requires `Authorization: Bearer <token>`.
+All endpoints are served under `/api`. Every endpoint except `/api/health` and the
+`/api/auth/*` session endpoints (`login`, `register`, `refresh`, `logout`) requires
+`Authorization: Bearer <access token>`.
 
 ## Error envelope
 
@@ -21,12 +22,35 @@ Common codes: `validation_error` (422), `unauthorized` (401), `forbidden` (403),
 |---|---|---|---|
 | POST | `/api/auth/login` | `{email, password}` | `TokenResponse` |
 | POST | `/api/auth/register` | `{email, password, full_name}` | `TokenResponse` (403 if registration disabled) |
+| POST | `/api/auth/refresh` | — (refresh cookie) | `TokenResponse`; rotates the cookie |
+| POST | `/api/auth/logout` | — (refresh cookie) | `204`; revokes this session, clears the cookie, idempotent |
+| POST | `/api/auth/logout-all` | — (bearer) | `204`; revokes every session of the user |
+| POST | `/api/auth/change-password` | `{current_password, new_password}` | `TokenResponse` for a new session; all other sessions are revoked |
 | GET | `/api/auth/me` | — | `User` |
 
 ```ts
 type User = { id: string; email: string; full_name: string; role: "admin" | "user" };
 type TokenResponse = { access_token: string; token_type: "bearer"; expires_in: number; user: User };
 ```
+
+### Session model
+
+- `login`, `register`, `refresh` and `change-password` set the cookie `nexa_refresh`
+  (`HttpOnly`, `SameSite=Strict`, `Path=/api/auth`, `Secure` in production). The refresh token
+  is never in a response body. `access_token` is a JWT valid for `expires_in` seconds (default
+  15 minutes), carries the session id (`sid`), and must be sent as `Authorization: Bearer`.
+  Clients keep it in memory only.
+- Every request re-checks that the access token's session is not revoked or expired.
+- A refresh token works once. Presenting a used one returns `401 refresh_reuse_detected` and
+  revokes the whole session. If it was used less than `REFRESH_REUSE_GRACE_SECONDS` ago the
+  response is `409 refresh_in_progress` (retry; nothing is revoked), which covers two tabs
+  refreshing at once.
+- `refresh`, `logout` and `logout-all` require the header `X-Nexa-CSRF: 1`, and reject an
+  `Origin` header that is neither the request host nor one of `CORS_ORIGINS` (`403 csrf_failed`).
+- `invalid_credentials` (401) means a submitted password was wrong; unlike a plain
+  `unauthorized` it must not trigger a token refresh.
+- Auth error codes: `unauthorized`, `invalid_credentials`, `invalid_refresh_token`,
+  `no_refresh_token`, `refresh_reuse_detected`, `refresh_in_progress` (409), `csrf_failed` (403).
 
 ## Chat
 

@@ -1,6 +1,8 @@
-import { clearSession, getToken } from './session';
+import { clearSession, getToken, readSession } from './session';
+import { refreshSession } from './sessionRefresh';
 
 export const API_BASE = '/api';
+const EXPIRY_SKEW_MS = 30_000;
 
 export class ApiError extends Error {
   readonly code: string;
@@ -106,12 +108,34 @@ function buildHeaders(options: RequestOptions): Headers {
 
 /** Performs a request and returns the raw Response once it is known to be 2xx. */
 export async function apiFetch(path: string, options: RequestOptions = {}): Promise<Response> {
+  const manageSession = !options.skipAuthRedirect;
+  if (manageSession) await refreshIfExpiring();
   const hadToken = getToken() !== null;
-  let response: Response;
+
+  let response = await send(path, options);
+  if (response.status === 401 && hadToken && manageSession && !(await isBadCredentials(response))) {
+    // The access token is short-lived: trade the refresh cookie for a new one and retry once.
+    if ((await refreshSession()) === 'refreshed') {
+      response = await send(path, options);
+      if (response.status === 401) clearSession();
+    }
+  }
+
+  if (!response.ok) throw await parseErrorResponse(response);
+  return response;
+}
+
+/** A 401 that means "the password you typed is wrong", not "your access token expired". */
+async function isBadCredentials(response: Response): Promise<boolean> {
+  return (await parseErrorResponse(response.clone())).code === 'invalid_credentials';
+}
+
+async function send(path: string, options: RequestOptions): Promise<Response> {
   try {
-    response = await fetch(buildUrl(path, options.query), {
+    return await fetch(buildUrl(path, options.query), {
       method: options.method ?? 'GET',
       headers: buildHeaders(options),
+      credentials: 'same-origin',
       body:
         options.formData ?? (options.json !== undefined ? JSON.stringify(options.json) : undefined),
       signal: options.signal,
@@ -124,13 +148,12 @@ export async function apiFetch(path: string, options: RequestOptions = {}): Prom
       status: 0,
     });
   }
+}
 
-  if (!response.ok) {
-    const error = await parseErrorResponse(response);
-    if (response.status === 401 && hadToken && !options.skipAuthRedirect) clearSession();
-    throw error;
-  }
-  return response;
+/** Avoids sending a request that is certain to be rejected because the token is expiring. */
+async function refreshIfExpiring(): Promise<void> {
+  const expiresAt = readSession()?.expiresAt;
+  if (expiresAt != null && expiresAt - Date.now() < EXPIRY_SKEW_MS) await refreshSession();
 }
 
 /** Performs a request and parses the JSON body (undefined for 204). */

@@ -227,7 +227,7 @@ policy document.
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/auth/login`, `POST /api/auth/register`, `GET /api/auth/me` | JWT authentication |
+| `POST /api/auth/login`, `/register`, `/refresh`, `/logout`, `/logout-all`, `/change-password`, `GET /api/auth/me` | Sessions: short-lived JWT + rotating refresh cookie |
 | `POST /api/chat/stream` | Streaming agent answer (SSE) |
 | `POST /api/chat` | Non-streaming agent answer |
 | `GET/PATCH/DELETE /api/conversations[/{id}]` | Conversation history (owner only) |
@@ -289,7 +289,12 @@ Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env` (default `admin@nexa.lo
 | `DATABASE_URL` | `postgresql+asyncpg://nexa:…@localhost:5440/nexa` | Application database (async URL) |
 | `SQL_READONLY_USER` / `SQL_READONLY_PASSWORD` | `nexa_readonly` / – | Role created by migrations; SELECT on `commerce` only |
 | `JWT_SECRET` | – | **Required in production** (≥ 32 chars) |
-| `JWT_EXPIRE_MINUTES` | `720` | Access token lifetime |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | Access token lifetime (kept in browser memory) |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `14` | Lifetime of each rotating refresh token (httpOnly cookie) |
+| `SESSION_MAX_DAYS` | `30` | Absolute session lifetime regardless of activity |
+| `REFRESH_REUSE_GRACE_SECONDS` | `10` | Window in which a just-rotated refresh token returns a retryable 409 instead of revoking the session |
+| `COOKIE_SECURE` | automatic | Force the `Secure` cookie flag on/off; automatic means on when `ENVIRONMENT=production` |
+| `REQUIRE_DB` | unset | Test-only: `1` makes integration tests fail instead of skip when PostgreSQL is unreachable |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | – | Bootstrap administrator (password must be changed in production) |
 | `ALLOW_REGISTRATION` | `true` | Allow self-service `user` accounts |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed browser origins |
@@ -409,7 +414,13 @@ Held-out results with this model, and a comparison with a 1.5B local model, are 
   states that tagged content is data. Suspicious chunks (for example "ignore previous
   instructions…") are flagged at ingestion and labelled in the prompt. Citations are validated
   against the real sources.
-- **Auth:** bcrypt password hashes and short-lived HS256 JWTs. Roles are `admin` and `user`.
+- **Auth:** bcrypt password hashes, 15-minute HS256 access tokens held only in browser memory, and
+  single-use refresh tokens in an httpOnly, `SameSite=Strict` cookie scoped to `/api/auth`
+  (`Secure` in production). Only a SHA-256 digest of each refresh token is stored. Replaying an
+  already-used refresh token revokes the whole session; logout, "sign out everywhere" and a
+  password change revoke sessions server-side, and every access token is checked against its
+  session. Cookie-driven endpoints require a custom `X-Nexa-CSRF` header and reject foreign
+  `Origin` headers. Roles are `admin` and `user`.
   Conversations and runs are ownership-scoped; another user's resource returns 404. Login gives
   a generic error with timing-equalised checks.
 - **Input:** Pydantic validation on every endpoint, a 4,000-character message limit, and removal of

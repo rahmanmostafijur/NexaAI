@@ -11,6 +11,7 @@ import { useSystemInfo } from '@/hooks/useSystemInfo';
 import { errorMessage } from '@/services/http';
 import { cn } from '@/utils/cn';
 import { useInspectorDefault, useThemePreference, type ThemePreference } from './preferences';
+import { SecurityCard } from './SecurityCard';
 
 const THEMES: { id: ThemePreference; label: string; icon: ReactNode }[] = [
   { id: 'system', label: 'System', icon: <Monitor className="size-4" aria-hidden /> },
@@ -142,12 +143,14 @@ export function SettingsPage() {
           <Button
             variant="secondary"
             className="mt-4"
-            onClick={logout}
+            onClick={() => void logout()}
             icon={<LogOut className="size-4" aria-hidden />}
           >
             Sign out
           </Button>
         </SettingsCard>
+
+        <SecurityCard />
 
         <SystemInfoCard />
       </div>

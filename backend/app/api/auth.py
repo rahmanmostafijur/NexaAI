@@ -89,7 +89,7 @@ async def login(
     user = await UserRepository(session).get_by_email(body.email)
     password_ok = verify_password(body.password, user.password_hash if user else _DUMMY_HASH)
     if user is None or not password_ok or not user.is_active:
-        raise UnauthorizedError("Incorrect email or password.")
+        raise UnauthorizedError("Incorrect email or password.", code="invalid_credentials")
     return await _sign_in(user, request, response, session, settings)
 
 
@@ -166,7 +166,8 @@ async def change_password(
     """Sets a new password, signs every other device out and keeps this one signed in."""
     await rate_limiter.hit(f"password:{user.id}", settings.rate_limit_auth_per_minute)
     if not verify_password(body.current_password, user.password_hash):
-        raise UnauthorizedError("Your current password is incorrect.")
+        # A distinct code: clients must not mistake this for an expired access token.
+        raise UnauthorizedError("Your current password is incorrect.", code="invalid_credentials")
     user.password_hash = hash_password(body.new_password)
     sessions = SessionService(session, settings)
     await sessions.revoke_all(user.id, "password_changed")
