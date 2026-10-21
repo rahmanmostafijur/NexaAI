@@ -103,6 +103,16 @@ class Settings(BaseSettings):
     rate_limit_auth_per_minute: int = Field(default=10, ge=1)
     rate_limit_upload_per_minute: int = Field(default=10, ge=1)
 
+    # Redis (optional): job queue for document indexing and shared rate limits.
+    redis_url: str = ""
+    ingestion_backend: Literal["inprocess", "arq"] = "inprocess"
+    ingestion_max_attempts: int = Field(default=3, ge=1, le=10)
+    ingestion_retry_base_seconds: float = Field(default=5.0, ge=0.0, le=600.0)
+    # A pending/processing document untouched for this long is considered orphaned.
+    ingestion_stuck_timeout_seconds: int = Field(default=600, ge=30)
+    ingestion_sweep_interval_seconds: int = Field(default=60, ge=5)
+    rate_limit_backend: Literal["memory", "redis"] = "memory"
+
     seed_on_startup: bool = False
 
     @field_validator("cors_origins", mode="before")
@@ -116,6 +126,10 @@ class Settings(BaseSettings):
     def _validate_production(self) -> Settings:
         if self.rag_chunk_overlap >= self.rag_chunk_size:
             raise ValueError("RAG_CHUNK_OVERLAP must be smaller than RAG_CHUNK_SIZE")
+        if not self.redis_url and self.ingestion_backend == "arq":
+            raise ValueError("INGESTION_BACKEND=arq requires REDIS_URL")
+        if not self.redis_url and self.rate_limit_backend == "redis":
+            raise ValueError("RATE_LIMIT_BACKEND=redis requires REDIS_URL")
         if self.environment == "production":
             secret = self.jwt_secret.get_secret_value()
             if secret == INSECURE_JWT_DEFAULT or len(secret) < 32:

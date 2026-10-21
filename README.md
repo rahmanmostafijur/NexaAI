@@ -307,6 +307,12 @@ Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` from `.env` (default `admin@nexa.lo
 | `MAX_UPLOAD_MB` | `10` | Upload size limit |
 | `ROUTER_CLARIFY_THRESHOLD`, `CONTEXT_MAX_MESSAGES` | `0.40`, `8` | Clarification threshold; history window |
 | `RATE_LIMIT_CHAT_PER_MINUTE`, `RATE_LIMIT_AUTH_PER_MINUTE`, `RATE_LIMIT_UPLOAD_PER_MINUTE` | `20`, `10`, `10` | Per-user / per-IP limits |
+| `REDIS_URL` | empty | Redis for the indexing queue and shared rate limits; empty keeps everything in-process |
+| `INGESTION_BACKEND` | `inprocess` | `inprocess` or `arq` (Redis queue with separate workers: `python -m arq app.worker.WorkerSettings`) |
+| `INGESTION_MAX_ATTEMPTS` / `INGESTION_RETRY_BASE_SECONDS` | `3` / `5` | Tries per document and exponential backoff base for transient failures |
+| `INGESTION_STUCK_TIMEOUT_SECONDS` / `INGESTION_SWEEP_INTERVAL_SECONDS` | `600` / `60` | A pending or processing document idle this long is re-queued (or marked failed after its last attempt); how often the API checks |
+| `RATE_LIMIT_BACKEND` | `memory` | `memory` or `redis` (shared across replicas; needs `REDIS_URL`) |
+| `REDIS_HOST_PORT` | `6381` | Host port of the compose Redis (development) |
 | `SEED_ON_STARTUP` | `true` in compose | Seed demo data when the backend container starts |
 
 ## Running with Docker

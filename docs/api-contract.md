@@ -165,6 +165,12 @@ type ConversationSummary = { id: string; title: string; created_at: string; upda
 | DELETE | `/api/documents/{id}` | 204 |
 | POST | `/api/documents/{id}/reindex` | `Document` (status `pending`) |
 
+Indexing is asynchronous: poll `GET /api/documents/{id}` until `status` is `indexed` or `failed`.
+A transient failure (for example the embedding service being down) puts the document back to
+`pending` with a "Will retry" note and retries with exponential backoff; a document that is
+orphaned by a crash or restart is re-queued automatically, and is marked `failed` after
+`INGESTION_MAX_ATTEMPTS` interrupted attempts (use re-index to try again).
+
 ```ts
 type Document = {
   id: string; title: string; filename: string; content_type: string;

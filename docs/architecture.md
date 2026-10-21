@@ -204,8 +204,9 @@ model) using `make evaluate-full` to measure the system at its intended capacity
 
 ## 4. Known limitations
 
-- Rate limiting and background ingestion run in-process, which suits one backend instance. Scaling
-  out needs Redis and a job queue.
+- Indexing runs in the API process by default (with retries, backoff and a recovery sweep for
+  documents orphaned by a crash). Set `INGESTION_BACKEND=arq` and `REDIS_URL` to run it on a
+  durable Redis queue with separate workers instead.
 - Answer-correctness checks are deterministic fact matches, not semantic judgements.
 - The heuristic vocabulary is hand-written. Adding a table requires adding its keywords to
   `app/sql/hints.py` for the best results, although embedding similarity still works without them.

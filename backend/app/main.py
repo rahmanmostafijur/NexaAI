@@ -54,6 +54,22 @@ async def purge_stale_sessions(settings: Settings) -> None:
         logger.info("Purged %d stale auth sessions", removed)
 
 
+async def sweep_stuck_documents(services: AgentServices, settings: Settings) -> None:
+    """Re-queue documents orphaned by a crash, now and then periodically."""
+    while True:
+        try:
+            await services.ingestion.recover_stuck(
+                services.ingestion_queue.enqueue,
+                stuck_after_seconds=settings.ingestion_stuck_timeout_seconds,
+                max_attempts=settings.ingestion_max_attempts,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Stuck-document recovery failed; will retry on the next sweep")
+        await asyncio.sleep(settings.ingestion_sweep_interval_seconds)
+
+
 async def _warm_up(embeddings: EmbeddingProvider) -> None:
     """Load the embedding model in the background so the first question is fast."""
     try:
@@ -85,12 +101,20 @@ def create_app(
         except Exception:
             logger.exception("Could not purge stale auth sessions at startup")
         warm_up = asyncio.create_task(_warm_up(app.state.services.embeddings))
+        try:
+            await app.state.services.ingestion_queue.start()
+        except Exception:
+            logger.exception("Could not start the ingestion queue; uploads will stay pending")
+        sweeper = asyncio.create_task(sweep_stuck_documents(app.state.services, settings))
         if not settings.llm_configured:
             logger.warning("No LLM configured: chat will use heuristic routing and cannot answer")
         yield
-        warm_up.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await warm_up
+        for task in (warm_up, sweeper):
+            task.cancel()
+        for task in (warm_up, sweeper):
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        await app.state.services.ingestion_queue.aclose()
         await app.state.services.llm.aclose()
         await dispose_engines()
 

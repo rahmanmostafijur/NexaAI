@@ -101,6 +101,24 @@ async def database() -> None:
 
 
 @pytest.fixture(scope="session")
+async def redis_url() -> str:
+    """A reachable Redis (db 15, reserved for tests), or skip; fail loudly if REQUIRE_REDIS=1."""
+    import redis.asyncio as aioredis
+
+    url = os.environ.get("TEST_REDIS_URL", "redis://localhost:6381/15")
+    client = aioredis.from_url(url, socket_connect_timeout=5)
+    try:
+        await client.ping()
+    except (OSError, aioredis.RedisError) as exc:
+        if os.environ.get("REQUIRE_REDIS") == "1":
+            pytest.fail(f"Redis is required (REQUIRE_REDIS=1) but not available: {exc}")
+        pytest.skip(f"Redis is not available: {exc}")
+    finally:
+        await client.aclose()
+    return url
+
+
+@pytest.fixture(scope="session")
 async def knowledge_base(database: None, embeddings: HashingEmbeddings) -> dict[str, uuid.UUID]:
     """Index two real policy documents plus one malicious document."""
     from app.db.session import get_session_factory

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass
 
 from app.agent.executor import ToolExecutor
@@ -16,11 +17,32 @@ from app.db.session import get_readonly_pool, get_session_factory
 from app.embeddings.base import EmbeddingProvider
 from app.llm.base import LLMProvider
 from app.rag.ingestion import IngestionService
+from app.rag.queue import (
+    ArqIngestionQueue,
+    IngestionQueue,
+    InProcessIngestionQueue,
+    JobOutcome,
+)
 from app.rag.retriever import HybridRetriever, LLMReranker
 from app.sql.catalog import SchemaCatalog
 from app.sql.executor import SQLExecutor
 from app.sql.schema_retriever import SchemaRetriever
 from app.sql.service import SQLService
+
+
+def build_ingestion_queue(settings: Settings, ingestion: IngestionService) -> IngestionQueue:
+    """Redis/arq when configured, otherwise indexing runs inside the API process."""
+    if settings.ingestion_backend == "arq":
+        return ArqIngestionQueue(settings.redis_url)
+
+    async def run(document_id: uuid.UUID, attempt: int, max_attempts: int) -> JobOutcome:
+        return await ingestion.run_job(document_id, attempt=attempt, max_attempts=max_attempts)
+
+    return InProcessIngestionQueue(
+        run,
+        max_attempts=settings.ingestion_max_attempts,
+        retry_base_seconds=settings.ingestion_retry_base_seconds,
+    )
 
 
 @dataclass
@@ -32,6 +54,7 @@ class AgentServices:
     retriever: HybridRetriever
     sql_service: SQLService
     ingestion: IngestionService
+    ingestion_queue: IngestionQueue
     router: QueryRouter
     planner: Planner
     registry: ToolRegistry
@@ -68,6 +91,7 @@ class AgentServices:
         registry.register(SQLTool(sql_service))
         registry.register(RAGTool(retriever, settings.rag_top_k))
         registry.register(GeneralTool())
+        ingestion = IngestionService(session_factory, embeddings, settings)
         return cls(
             settings=settings,
             llm=llm,
@@ -75,7 +99,8 @@ class AgentServices:
             catalog=catalog,
             retriever=retriever,
             sql_service=sql_service,
-            ingestion=IngestionService(session_factory, embeddings, settings),
+            ingestion=ingestion,
+            ingestion_queue=build_ingestion_queue(settings, ingestion),
             router=QueryRouter(llm, retriever, clarify_threshold=settings.router_clarify_threshold),
             planner=Planner(llm),
             registry=registry,

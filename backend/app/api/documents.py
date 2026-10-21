@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, Query, Request, Response, UploadFile
+from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile
 
 from app.api.deps import AdminUser, CurrentUser, DbDep, ServicesDep, SettingsDep
 from app.core.errors import PayloadTooLargeError
@@ -16,12 +17,23 @@ from app.schemas.documents import ChunkList, ChunkOut, DocumentList, DocumentOut
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 _MULTIPART_OVERHEAD = 64 * 1024
+logger = logging.getLogger(__name__)
+
+
+async def _enqueue(services: ServicesDep, document_id: uuid.UUID) -> None:
+    """Hand the document to the indexing queue. If the queue is unreachable the document
+    stays `pending` and the recovery sweep picks it up, so the upload itself still succeeds."""
+    try:
+        await services.ingestion_queue.enqueue(document_id)
+    except Exception:
+        logger.exception(
+            "Could not enqueue document %s; the recovery sweep will retry", document_id
+        )
 
 
 @router.post("", response_model=DocumentOut, status_code=201)
 async def upload_document(
     request: Request,
-    background: BackgroundTasks,
     user: AdminUser,
     services: ServicesDep,
     settings: SettingsDep,
@@ -41,7 +53,7 @@ async def upload_document(
         title=title,
         uploaded_by=user.id,
     )
-    background.add_task(services.ingestion.process_document, document.id)
+    await _enqueue(services, document.id)
     return DocumentOut.model_validate(document)
 
 
@@ -74,10 +86,10 @@ async def list_chunks(
 
 @router.post("/{document_id}/reindex", response_model=DocumentOut)
 async def reindex_document(
-    document_id: uuid.UUID, background: BackgroundTasks, user: AdminUser, services: ServicesDep
+    document_id: uuid.UUID, user: AdminUser, services: ServicesDep
 ) -> DocumentOut:
     document = await services.ingestion.mark_for_reindex(document_id)
-    background.add_task(services.ingestion.process_document, document.id)
+    await _enqueue(services, document.id)
     return DocumentOut.model_validate(document)
 
 

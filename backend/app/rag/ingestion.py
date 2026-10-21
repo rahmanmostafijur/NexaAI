@@ -12,11 +12,13 @@ import logging
 import re
 import uuid
 import zipfile
-from datetime import UTC, datetime
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
@@ -34,11 +36,22 @@ from app.rag.chunker import chunk_document
 from app.rag.cleaning import clean_text
 from app.rag.extractors import SOURCE_TYPES, PageText, extract, source_type_for
 from app.rag.injection import find_injection_markers
+from app.rag.queue import JobOutcome
 
 logger = logging.getLogger(__name__)
 
 _SAFE_FILENAME = re.compile(r"[^\w.\- ()ঀ-৿]+")
 _EMBED_BATCH = 64
+
+
+@dataclass(frozen=True)
+class RecoveryReport:
+    requeued: int
+    failed: int
+
+
+def _attempts(document: Document) -> int:
+    return int((document.meta or {}).get("ingest_attempts", 0))
 
 
 def sanitize_filename(filename: str) -> str:
@@ -133,15 +146,97 @@ class IngestionService:
             return document
 
     async def process_document(self, document_id: uuid.UUID) -> None:
-        """Index a document. Never raises: failures are recorded on the document row."""
+        """Index a document once. Never raises: failures are recorded on the document row."""
+        await self.run_job(document_id, attempt=1, max_attempts=1)
+
+    async def run_job(
+        self, document_id: uuid.UUID, *, attempt: int, max_attempts: int
+    ) -> JobOutcome:
+        """One indexing attempt. Never raises (except cancellation).
+
+        Returns RETRY after a transient failure (the document goes back to `pending`), and DONE
+        when the document is indexed or has failed for good.
+        """
         try:
-            await self._set_status(document_id, "processing", error=None)
+            await self._begin(document_id)
             await self._index(document_id)
+            return JobOutcome.DONE
+        except asyncio.CancelledError:
+            # Shutting down mid-job: leave the document claimable instead of "processing".
+            await asyncio.shield(self._set_status(document_id, "pending", error=None))
+            raise
         except Exception as exc:
+            retryable = not isinstance(exc, AppError) or exc.retryable
             message = exc.message if isinstance(exc, AppError) else "Unexpected processing error."
             if not isinstance(exc, AppError):
                 logger.exception("Indexing failed for document %s", document_id)
+            if retryable and attempt < max_attempts:
+                note = f"{message} Will retry (attempt {attempt} of {max_attempts})."
+                await self._set_status(document_id, "pending", error=note)
+                return JobOutcome.RETRY
             await self._set_status(document_id, "failed", error=message)
+            return JobOutcome.DONE
+
+    async def recover_stuck(
+        self,
+        enqueue: Callable[[uuid.UUID], Awaitable[None]],
+        *,
+        stuck_after_seconds: int,
+        max_attempts: int,
+    ) -> RecoveryReport:
+        """Re-queue documents orphaned by a crash or restart.
+
+        A `pending`/`processing` document that has not been touched for `stuck_after_seconds`
+        (live jobs refresh `updated_at` as they progress) is requeued, unless it already used
+        up its attempts, in which case it is marked failed so it cannot loop forever.
+        """
+        cutoff = datetime.now(UTC) - timedelta(seconds=stuck_after_seconds)
+        requeue: list[uuid.UUID] = []
+        failed = 0
+        async with self._session_factory() as session:
+            stuck = await session.scalars(
+                select(Document)
+                .where(Document.status.in_(("pending", "processing")), Document.updated_at < cutoff)
+                .with_for_update(skip_locked=True)
+            )
+            for document in stuck:
+                if _attempts(document) >= max_attempts:
+                    document.status = "failed"
+                    document.error = (
+                        "Indexing was interrupted too many times. Use re-index to try again."
+                    )
+                    failed += 1
+                else:
+                    document.status = "pending"
+                    document.error = None
+                    requeue.append(document.id)
+            await session.commit()
+        for document_id in requeue:
+            await enqueue(document_id)
+        if requeue or failed:
+            logger.warning(
+                "Recovered stuck documents: %d requeued, %d failed", len(requeue), failed
+            )
+        return RecoveryReport(requeued=len(requeue), failed=failed)
+
+    async def _begin(self, document_id: uuid.UUID) -> None:
+        """Claim the document; the attempt counter is cumulative across restarts."""
+        async with self._session_factory() as session:
+            document = await session.get(Document, document_id)
+            if document is None:
+                raise NotFoundError("Document not found")
+            document.status = "processing"
+            document.error = None
+            document.meta = {**(document.meta or {}), "ingest_attempts": _attempts(document) + 1}
+            await session.commit()
+
+    async def _heartbeat(self, document_id: uuid.UUID) -> None:
+        """Show the document is still being worked on, so recovery leaves it alone."""
+        async with self._session_factory() as session:
+            await session.execute(
+                update(Document).where(Document.id == document_id).values(updated_at=func.now())
+            )
+            await session.commit()
 
     async def _index(self, document_id: uuid.UUID) -> None:
         async with self._session_factory() as session:
@@ -177,6 +272,7 @@ class IngestionService:
                         embed_texts[start : start + _EMBED_BATCH]
                     )
                 )
+                await self._heartbeat(document_id)
 
             now = datetime.now(UTC)
             suspicious_chunks = 0
@@ -239,6 +335,7 @@ class IngestionService:
                 raise ConflictError("This document is already being indexed.")
             document.status = "pending"
             document.error = None
+            document.meta = {**(document.meta or {}), "ingest_attempts": 0}
             await session.commit()
             await session.refresh(document)
             return document
