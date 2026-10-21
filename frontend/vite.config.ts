@@ -26,6 +26,11 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./src/test/setup.ts'],
       css: false,
       restoreMocks: true,
+      // Each worker boots its own jsdom (~300 MB). Unbounded parallelism on a many-core,
+      // low-memory machine made workers die at start-up ("no tests, one error per file").
+      maxWorkers: 4,
+      testTimeout: 20_000,
+      hookTimeout: 20_000,
     },
   };
 });

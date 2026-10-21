@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+
+// The default 1 s is too tight for findBy*/waitFor when workers compete for CPU.
+configure({ asyncUtilTimeout: 5000 });
 
 // jsdom lacks matchMedia; default every query to "false" (small screen, light scheme).
 if (!window.matchMedia) {
