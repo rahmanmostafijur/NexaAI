@@ -3,7 +3,7 @@
 BACKEND := cd backend &&
 FRONTEND := cd frontend &&
 
-.PHONY: help up down logs dev dev-backend dev-frontend install migrate seed reseed test test-backend \
+.PHONY: help up down up-prod down-prod logs dev dev-backend dev-frontend install migrate seed reseed test test-backend \
         test-frontend coverage lint format evaluate evaluate-full
 
 help: ## Show available commands
@@ -14,6 +14,12 @@ up: ## Build and start the full stack in Docker (http://localhost:3000)
 
 down: ## Stop the Docker stack
 	docker compose down
+
+up-prod: ## Production-style stack: no dev ports, Redis queue + worker (needs the variables in .env.example)
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+
+down-prod: ## Stop the production-style stack
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 
 logs: ## Follow backend logs
 	docker compose logs -f backend

@@ -59,4 +59,5 @@ class WorkerSettings:
     max_tries = get_settings().ingestion_max_attempts
     job_timeout = _JOB_TIMEOUT_SECONDS
     max_jobs = 2
+    health_check_interval = 30  # `python -m arq app.worker.WorkerSettings --check` reads this
     keep_result = 0  # the document row is the result; lets a document be re-enqueued later

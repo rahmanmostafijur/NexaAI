@@ -1,8 +1,11 @@
 name: nexa-agent
 
+# Development stack. For a production-style deployment layer the override file on top:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:0.8.0-pg16
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-nexa}
@@ -19,7 +22,7 @@ services:
       retries: 20
 
   redis:
-    image: redis:7.4-alpine
+    image: redis:7.4.1-alpine
     restart: unless-stopped
     # Append-only file so queued indexing jobs survive a Redis restart.
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
@@ -45,6 +48,9 @@ services:
       UPLOAD_DIR: /data/uploads
       FASTEMBED_CACHE_DIR: /data/models
       SEED_ON_STARTUP: ${SEED_ON_STARTUP:-true}
+      # Trust X-Forwarded-For from the bundled nginx. Only safe because, in production, the
+      # backend has no published port; behind a different proxy set this to its address.
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-*}
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,7 +59,8 @@ services:
     volumes:
       - backend_data:/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      # Readiness: database reachable and migrations at head.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/ready')"]
       interval: 10s
       timeout: 5s
       start_period: 180s
@@ -64,15 +71,16 @@ services:
       context: ./frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "${FRONTEND_HOST_PORT:-3000}:80"
+      - "${FRONTEND_HOST_PORT:-3000}:8080"
 
   # Optional local model server: `docker compose --profile local-llm up`
   # then set LLM_BASE_URL=http://ollama:11434/v1 and pull a model:
   # `docker compose exec ollama ollama pull qwen2.5:7b-instruct`
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.5.4
     profiles: ["local-llm"]
     restart: unless-stopped
     volumes:

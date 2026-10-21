@@ -19,6 +19,8 @@ function Invoke-In([string]$Dir, [scriptblock]$Block) {
 $tasks = [ordered]@{
     "up"            = { docker compose up --build -d }
     "down"          = { docker compose down }
+    "up-prod"       = { docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d }
+    "down-prod"     = { docker compose -f docker-compose.yml -f docker-compose.prod.yml down }
     "logs"          = { docker compose logs -f backend }
     "install"       = { Invoke-In backend { uv sync }; Invoke-In frontend { npm ci } }
     "migrate"       = { Invoke-In backend { uv run alembic upgrade head } }

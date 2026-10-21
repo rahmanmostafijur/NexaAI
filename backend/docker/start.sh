@@ -10,4 +10,5 @@ if [ "${SEED_ON_STARTUP:-false}" = "true" ]; then
 fi
 
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000 \
-    --proxy-headers --forwarded-allow-ips="*" --timeout-keep-alive 75
+    --proxy-headers --forwarded-allow-ips="${FORWARDED_ALLOW_IPS:-127.0.0.1}" \
+    --timeout-keep-alive 75
